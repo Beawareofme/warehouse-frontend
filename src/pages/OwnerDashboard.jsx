@@ -11,6 +11,7 @@ import {
   FaEnvelope
 } from "react-icons/fa";
 import { useEffect, useState } from "react";
+import { API_BASE, getAuthHeaders } from "../utils/api";
 import { useNavigate } from "react-router-dom";
 
 import { listMyListings } from "../utils/api.js";
@@ -43,7 +44,7 @@ export default function OwnerDashboard() {
       if (!user) return;
 
       try {
-        const res = await fetch(`http://localhost:5000/warehouses/owner/${user.id}`);
+        const res = await fetch(`${API_BASE}/warehouses/owner/${user.id}`);
         const data = await res.json();
 
         if (Array.isArray(data)) {
@@ -59,16 +60,13 @@ export default function OwnerDashboard() {
     };
 
     const fetchOwnerBookings = async () => {
-      const token = localStorage.getItem("token");
       const rawUser =
         localStorage.getItem("auth_user") || localStorage.getItem("user");
       const user = rawUser ? JSON.parse(rawUser) : null;
       if (!user || (user.role !== "owner" && !(user.roles||[]).includes("WAREHOUSE_OWNER"))) return;
 
       try {
-        const res = await fetch(`http://localhost:5000/bookings/owner/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(`${API_BASE}/bookings/owner/${user.id}`, getAuthHeaders());
         const data = await res.json();
         setOwnerBookings(data || []);
       } catch (err) {
@@ -92,14 +90,10 @@ export default function OwnerDashboard() {
   }, []);
 
   const updateBookingStatus = async (bookingId, status) => {
-    const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://localhost:5000/bookings/${bookingId}`, {
+      const res = await fetch(`${API_BASE}/bookings/${bookingId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders().headers, // includes JSON content-type + Authorization
         body: JSON.stringify({ status }),
       });
 
@@ -109,9 +103,7 @@ export default function OwnerDashboard() {
       const rawUser =
         localStorage.getItem("auth_user") || localStorage.getItem("user");
       const user = rawUser ? JSON.parse(rawUser) : null;
-      const bookingsRes = await fetch(`http://localhost:5000/bookings/owner/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const bookingsRes = await fetch(`${API_BASE}/bookings/owner/${user.id}`, getAuthHeaders());
       const updated = await bookingsRes.json();
       setOwnerBookings(updated);
     } catch (err) {
@@ -125,13 +117,12 @@ export default function OwnerDashboard() {
   };
 
   const handleDeleteWarehouse = async (id) => {
-    const token = localStorage.getItem("token");
     if (!window.confirm("Are you sure you want to delete this warehouse?")) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/warehouses/${id}`, {
+      const res = await fetch(`${API_BASE}/warehouses/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders().headers,
       });
 
       if (!res.ok) throw new Error("Delete failed");
@@ -145,13 +136,10 @@ export default function OwnerDashboard() {
   const sendMessageToMerchant = async () => {
     if (!messageBooking || !messageContent.trim()) return;
     setSendingMessage(true);
-    const token = localStorage.getItem("token");
     try {
-      const res = await fetch("http://localhost:5000/bookings/message", {
+      const res = await fetch(`${API_BASE}/bookings/message`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` },
+        headers: { ...getAuthHeaders().headers, "Content-Type": "application/json" },
         body: JSON.stringify({
           bookingId: messageBooking.id,
           merchantEmail: messageBooking.merchant.email,
@@ -179,8 +167,8 @@ export default function OwnerDashboard() {
 
   const submitEditForm = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    const formData = new FormData();
+    // NOTE: For multipart/form-data we must NOT set Content-Type manually.
+    const formData = new FormData(); // ✅ fixed typo
     formData.append("name", editingWarehouse.name);
     formData.append("address", editingWarehouse.address);
     formData.append("city", editingWarehouse.city);
@@ -193,9 +181,13 @@ export default function OwnerDashboard() {
     newImages.forEach((img) => formData.append("images", img));
 
     try {
-      const res = await fetch(`http://localhost:5000/warehouses/${editingWarehouse.id}`, {
+      // Build auth-only headers (no JSON content-type)
+      const auth = getAuthHeaders().headers || {};
+      const onlyAuth = auth.Authorization ? { Authorization: auth.Authorization } : {};
+
+      const res = await fetch(`${API_BASE}/warehouses/${editingWarehouse.id}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: onlyAuth,
         body: formData,
       });
       if (!res.ok) throw new Error("Update failed");

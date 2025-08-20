@@ -1,8 +1,12 @@
 // ===== EXISTING =====
 // export const API_BASE = "http://localhost:5000"; // Or your backend URL
 
-// ===== PATCHED: read from env with localhost fallback, trim trailing slash =====
-export const API_BASE = (process.env.REACT_APP_API_URL || "http://localhost:5000").replace(/\/+$/, "");
+// ===== PATCHED: read from env (Vite or CRA) with localhost fallback, trim trailing slash =====
+const API_FROM_ENV =
+  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) || 
+  (typeof process !== "undefined" && process.env && process.env.REACT_APP_API_URL);          
+
+export const API_BASE = (API_FROM_ENV || "http://localhost:5000").replace(/\/+$/, "");
 
 // (rest of your file stays the same)
 export function getAuthHeaders() {

@@ -1,11 +1,11 @@
 // frontend/src/pages/BookingDetails.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { API_BASE, getAuthHeaders } from "../utils/api";
 
 export default function BookingDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -14,8 +14,8 @@ export default function BookingDetails() {
     const fetchBooking = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:5000/bookings/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await fetch(`${API_BASE}/bookings/${id}`, {
+          ...getAuthHeaders(),
         });
         if (!res.ok) {
           const txt = await res.text();
@@ -30,21 +30,22 @@ export default function BookingDetails() {
       }
     };
     fetchBooking();
-  }, [id, token]);
+  }, [id]);
 
   if (loading) return <div className="p-6 text-white">Loading...</div>;
   if (error) return <div className="p-6 text-red-400">{error}</div>;
   if (!booking) return <div className="p-6 text-gray-400">Booking not found</div>;
 
   // Build a minimal status history if backend doesn't supply one
-  const statusHistory = booking.statusHistory && booking.statusHistory.length
-    ? booking.statusHistory
-    : [
-        { status: "pending", date: booking.createdAt },
-        ...(booking.status && booking.status !== "pending"
-          ? [{ status: booking.status, date: booking.updatedAt || booking.createdAt }]
-          : []),
-      ];
+  const statusHistory =
+    booking.statusHistory && booking.statusHistory.length
+      ? booking.statusHistory
+      : [
+          { status: "pending", date: booking.createdAt },
+          ...(booking.status && booking.status !== "pending"
+            ? [{ status: booking.status, date: booking.updatedAt || booking.createdAt }]
+            : []),
+        ];
 
   const owner = booking.warehouse?.owner;
 
@@ -62,13 +63,15 @@ export default function BookingDetails() {
         <p className="text-gray-300 mb-2">{booking.warehouse?.address}</p>
         <p className="text-gray-300 mb-2">
           Status:{" "}
-          <span className={
-            booking.status === "accepted"
-              ? "text-green-400"
-              : booking.status === "pending"
-              ? "text-yellow-300"
-              : "text-red-400"
-          }>
+          <span
+            className={
+              booking.status === "accepted"
+                ? "text-green-400"
+                : booking.status === "pending"
+                ? "text-yellow-300"
+                : "text-red-400"
+            }
+          >
             {booking.status}
           </span>
         </p>

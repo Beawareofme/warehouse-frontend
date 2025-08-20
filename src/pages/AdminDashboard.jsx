@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaUserShield, FaTrash, FaSignOutAlt, FaSearch, FaMoon, FaSun } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { API_BASE, getAuthHeaders } from "../utils/api";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -67,10 +68,11 @@ export default function AdminDashboard() {
     setLoading(true);
     setError("");
     try {
+      const auth = getAuthHeaders();
       const [uRes, wRes, bRes] = await Promise.all([
-        fetch("http://localhost:5000/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("http://localhost:5000/admin/warehouses", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("http://localhost:5000/admin/bookings", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE}/admin/users`, auth),
+        fetch(`${API_BASE}/admin/warehouses`, auth),
+        fetch(`${API_BASE}/admin/bookings`, auth),
       ]);
       setUsers(await parseRes(uRes));
       setWarehouses(await parseRes(wRes));
@@ -84,9 +86,9 @@ export default function AdminDashboard() {
 
   const toggleApprove = (id, approve) => {
     openConfirmModal(`${approve ? "Approve" : "Disable"} this warehouse?`, async () => {
-      await fetch(`http://localhost:5000/admin/warehouses/${id}/approve`, {
+      await fetch(`${API_BASE}/admin/warehouses/${id}/approve`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { ...getAuthHeaders().headers, "Content-Type": "application/json" },
         body: JSON.stringify({ isApproved: !!approve }),
       });
       fetchAll();
@@ -95,9 +97,9 @@ export default function AdminDashboard() {
 
   const deleteWarehouse = (id) => {
     openConfirmModal("Delete this warehouse permanently?", async () => {
-      await fetch(`http://localhost:5000/admin/warehouses/${id}`, {
+      await fetch(`${API_BASE}/admin/warehouses/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders().headers,
       });
       fetchAll();
     });
@@ -105,9 +107,9 @@ export default function AdminDashboard() {
 
   const promoteToAdmin = (id) => {
     openConfirmModal("Promote this user to admin?", async () => {
-      await fetch(`http://localhost:5000/admin/users/${id}/role`, {
+      await fetch(`${API_BASE}/admin/users/${id}/role`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { ...getAuthHeaders().headers, "Content-Type": "application/json" },
         body: JSON.stringify({ role: "admin" }),
       });
       fetchAll();
@@ -116,9 +118,9 @@ export default function AdminDashboard() {
 
   const deleteUser = (id) => {
     openConfirmModal("Delete this user permanently?", async () => {
-      await fetch(`http://localhost:5000/admin/users/${id}`, {
+      await fetch(`${API_BASE}/admin/users/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders().headers,
       });
       fetchAll();
     });

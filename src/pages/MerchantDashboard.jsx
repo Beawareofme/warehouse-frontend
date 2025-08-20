@@ -8,6 +8,7 @@ import {
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { API_BASE, getAuthHeaders } from "../utils/api";
 
 export default function MerchantDashboard() {
   const navigate = useNavigate();
@@ -25,9 +26,7 @@ export default function MerchantDashboard() {
   const fetchBookings = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:5000/bookings/merchant/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API_BASE}/bookings/merchant/${user.id}`, getAuthHeaders());
       if (!res.ok) throw new Error("Failed to load bookings");
       const data = await res.json();
       setBookings(data || []);
@@ -44,7 +43,7 @@ export default function MerchantDashboard() {
   const handleStartBooking = async () => {
     setShowWarehouses(true);
     try {
-      const res = await fetch("http://localhost:5000/warehouses");
+      const res = await fetch(`${API_BASE}/warehouses`);
       if (!res.ok) throw new Error("Failed to fetch warehouses");
       const data = await res.json();
       setWarehouses(Array.isArray(data) ? data : data.warehouses || []);
@@ -57,12 +56,9 @@ export default function MerchantDashboard() {
   // ✅ Make booking request
   const handleBook = async (id) => {
     try {
-      const res = await fetch("http://localhost:5000/bookings", {
+      const res = await fetch(`${API_BASE}/bookings`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { ...getAuthHeaders().headers, "Content-Type": "application/json" },
         body: JSON.stringify({ warehouseId: id }),
       });
 

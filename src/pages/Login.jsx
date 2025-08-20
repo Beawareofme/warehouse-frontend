@@ -1,5 +1,6 @@
 // src/pages/Login.jsx
-import { useState, useEffect } from 'react';
+import { useState } from "react";
+import { API_BASE } from "../utils/api";
 import {
   FaEnvelope,
   FaLock,
@@ -46,7 +47,7 @@ export default function Login() {
     } catch (err) {
       const msg =
         err?.message?.includes('Failed to fetch')
-          ? 'Cannot reach the server. Check that the backend is running on http://localhost:5000.'
+          ? `Cannot reach the server. Check that the backend is running on ${API_BASE}.`
           : err?.message || 'Something went wrong.';
       setError(msg);
     } finally {

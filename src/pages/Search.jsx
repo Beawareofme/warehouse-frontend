@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FaMapMarkerAlt, FaSearch } from "react-icons/fa";
+import { API_BASE } from "../utils/api";
+
 
 export default function Search() {
   const navigate = useNavigate();
@@ -50,7 +52,7 @@ export default function Search() {
         if (v != null && String(v).trim() !== "") qs.set(k, String(v).trim());
       });
 
-      const endpoint = `http://localhost:5000/warehouses/search?${qs.toString()}`;
+      const endpoint = `${API_BASE}/warehouses/search?${qs.toString()}`;
       const res = await fetch(endpoint);
       const data = await res.json();
 

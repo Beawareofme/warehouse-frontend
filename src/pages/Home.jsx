@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE, getAuthHeaders } from "../utils/api";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/NavBar";
 import SearchBar from "../components/SearchBar";
@@ -31,7 +32,7 @@ export default function Home() {
           (Array.isArray(parsed.roles) && parsed.roles.includes("WAREHOUSE_OWNER"));
 
         if (isOwner && parsed.id) {
-          fetch(`http://localhost:5000/warehouses/owner/${parsed.id}`)
+          fetch(`${API_BASE}/warehouses/owner/${parsed.id}`)
             .then((res) => res.json())
             .then((data) => {
               if (Array.isArray(data)) setOwnerWarehouses(data);
@@ -43,7 +44,7 @@ export default function Home() {
       }
     }
 
-    fetch("http://localhost:5000/warehouses")
+    fetch(`${API_BASE}/warehouses`)
       .then((res) => res.json())
       .then((data) => setWarehouses(data.warehouses || []))
       .catch((err) => console.error("Failed to fetch warehouses:", err));
@@ -57,12 +58,9 @@ export default function Home() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/book", {
+      const res = await fetch(`${API_BASE}/book`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { ...getAuthHeaders().headers, "Content-Type": "application/json" },
         body: JSON.stringify({ warehouseId }),
       });
 
