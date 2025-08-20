@@ -6,7 +6,6 @@ import WizardShell from "../components/Wizard/WizardShell.jsx";
 import TextInput from "../components/inputs/TextInput.jsx";
 import Select from "../components/inputs/Select.jsx";
 import Toggle from "../components/inputs/Toggle.jsx";
-import CheckboxGroup from "../components/inputs/CheckboxGroup.jsx";
 import AmenityChecklist from "../components/Amenities/AmenityChecklist.jsx";
 import UseChecklist from "../components/ApprovedUses/UseChecklist.jsx";
 import PricingEditor from "../components/Pricing/PricingEditor.jsx";

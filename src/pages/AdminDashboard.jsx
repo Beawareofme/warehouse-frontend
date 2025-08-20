@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { FaUserShield, FaTrash, FaSignOutAlt, FaSearch, FaMoon, FaSun } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { API_BASE, getAuthHeaders } from "../utils/api";
@@ -48,23 +48,7 @@ export default function AdminDashboard() {
     user?.role === "admin" ||
     (Array.isArray(user?.roles) && user.roles.includes("ADMIN"));
 
-  useEffect(() => {
-    if (!token || !isAdmin) {
-      navigate("/login/admin");
-      return;
-    }
-    fetchAll();
-  }, [navigate, token, isAdmin]);
-
-  const parseRes = async (res) => {
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Error ${res.status}: ${errText}`);
-    }
-    return res.json();
-  };
-
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -82,6 +66,22 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
+  }, [token, API_BASE]); // token read via getAuthHeaders; safe to include
+
+  useEffect(() => {
+    if (!token || !isAdmin) {
+      navigate("/login/admin");
+      return;
+    }
+    fetchAll();
+  }, [navigate, token, isAdmin, fetchAll]);
+
+  const parseRes = async (res) => {
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Error ${res.status}: ${errText}`);
+    }
+    return res.json();
   };
 
   const toggleApprove = (id, approve) => {

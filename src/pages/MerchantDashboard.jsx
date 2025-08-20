@@ -4,10 +4,9 @@ import {
   FaBookOpen,
   FaSignOutAlt,
   FaChartBar,
-  FaSearch,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { API_BASE, getAuthHeaders } from "../utils/api";
 
 export default function MerchantDashboard() {
@@ -22,22 +21,25 @@ export default function MerchantDashboard() {
   const user = JSON.parse(localStorage.getItem("user"));
   const token = localStorage.getItem("token");
 
-  // ✅ Load merchant bookings
-  const fetchBookings = async () => {
+  // ✅ Load merchant bookings (wrapped in useCallback to satisfy exhaustive-deps)
+  const fetchBookings = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await fetch(`${API_BASE}/bookings/merchant/${user.id}`, getAuthHeaders());
+      const res = await fetch(
+        `${API_BASE}/bookings/merchant/${user.id}`,
+        getAuthHeaders()
+      );
       if (!res.ok) throw new Error("Failed to load bookings");
       const data = await res.json();
       setBookings(data || []);
     } catch (err) {
       console.error("Failed to fetch bookings", err);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchBookings();
-  }, [token, user]);
+  }, [fetchBookings, token]);
 
   // ✅ Load warehouses
   const handleStartBooking = async () => {
@@ -86,13 +88,15 @@ export default function MerchantDashboard() {
 
   // ✅ Filtered warehouses
   const filteredWarehouses = warehouses.filter((w) => {
+    const name = (w.name || "").toLowerCase();
+    const city = (w.city || "").toLowerCase();
     const matchesSearch =
-      w.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      w.city.toLowerCase().includes(searchTerm.toLowerCase());
+      name.includes(searchTerm.toLowerCase()) ||
+      city.includes(searchTerm.toLowerCase());
 
-    const matchesCity = filterCity ? w.city.toLowerCase() === filterCity.toLowerCase() : true;
-    const matchesSpace = minSpace ? w.availableSpace >= Number(minSpace) : true;
-    const matchesPrice = maxPrice ? w.price <= Number(maxPrice) : true;
+    const matchesCity = filterCity ? city === filterCity.toLowerCase() : true;
+    const matchesSpace = minSpace ? (w.availableSpace || 0) >= Number(minSpace) : true;
+    const matchesPrice = maxPrice ? (w.price || 0) <= Number(maxPrice) : true;
 
     return matchesSearch && matchesCity && matchesSpace && matchesPrice;
   });
@@ -163,12 +167,8 @@ export default function MerchantDashboard() {
             </div>
             <div className="text-sm text-gray-200">
               <p>Total Bookings: {bookings.length}</p>
-              <p>
-                Active: {bookings.filter((b) => b.status === "accepted").length}
-              </p>
-              <p>
-                Cancelled: {bookings.filter((b) => b.status === "rejected").length}
-              </p>
+              <p>Active: {bookings.filter((b) => b.status === "accepted").length}</p>
+              <p>Cancelled: {bookings.filter((b) => b.status === "rejected").length}</p>
             </div>
           </div>
 
@@ -251,11 +251,15 @@ export default function MerchantDashboard() {
                       />
                     )}
                     <h4 className="text-lg font-bold">{w.name}</h4>
-                    <p className="text-sm text-gray-400">{w.city}, {w.state}</p>
+                    <p className="text-sm text-gray-400">
+                      {(w.city || "")}{w.state ? `, ${w.state}` : ""}
+                    </p>
                     <p className="text-sm">Available Space: {w.availableSpace}</p>
                     {w.price && <p className="text-sm">Price: ₹{w.price}</p>}
-                    {w.amenities && (
-                      <p className="text-xs text-gray-300 mt-1">Amenities: {w.amenities.join(", ")}</p>
+                    {Array.isArray(w.amenities) && w.amenities.length > 0 && (
+                      <p className="text-xs text-gray-300 mt-1">
+                        Amenities: {w.amenities.join(", ")}
+                      </p>
                     )}
                     <button
                       onClick={() => handleBook(w.id)}

@@ -1,19 +1,7 @@
-import {
-  FaPlusCircle,
-  FaBoxes,
-  FaMapMarkedAlt,
-  FaSignOutAlt,
-  FaWarehouse,
-  FaTrashAlt,
-  FaEdit,
-  FaHome,
-  FaBookOpen,
-  FaEnvelope
-} from "react-icons/fa";
+import { FaPlusCircle, FaEnvelope } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import { API_BASE, getAuthHeaders } from "../utils/api";
 import { useNavigate } from "react-router-dom";
-
 import { listMyListings } from "../utils/api.js";
 
 export default function OwnerDashboard() {
@@ -21,7 +9,6 @@ export default function OwnerDashboard() {
   const [warehouses, setWarehouses] = useState([]);
   const [totalSpace, setTotalSpace] = useState(0);
   const [availableSpace, setAvailableSpace] = useState(0);
-  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [ownerBookings, setOwnerBookings] = useState([]);
   const [showMessageModal, setShowMessageModal] = useState(false);
@@ -63,10 +50,17 @@ export default function OwnerDashboard() {
       const rawUser =
         localStorage.getItem("auth_user") || localStorage.getItem("user");
       const user = rawUser ? JSON.parse(rawUser) : null;
-      if (!user || (user.role !== "owner" && !(user.roles||[]).includes("WAREHOUSE_OWNER"))) return;
+      if (
+        !user ||
+        (user.role !== "owner" && !(user.roles || []).includes("WAREHOUSE_OWNER"))
+      )
+        return;
 
       try {
-        const res = await fetch(`${API_BASE}/bookings/owner/${user.id}`, getAuthHeaders());
+        const res = await fetch(
+          `${API_BASE}/bookings/owner/${user.id}`,
+          getAuthHeaders()
+        );
         const data = await res.json();
         setOwnerBookings(data || []);
       } catch (err) {
@@ -103,33 +97,14 @@ export default function OwnerDashboard() {
       const rawUser =
         localStorage.getItem("auth_user") || localStorage.getItem("user");
       const user = rawUser ? JSON.parse(rawUser) : null;
-      const bookingsRes = await fetch(`${API_BASE}/bookings/owner/${user.id}`, getAuthHeaders());
+      const bookingsRes = await fetch(
+        `${API_BASE}/bookings/owner/${user.id}`,
+        getAuthHeaders()
+      );
       const updated = await bookingsRes.json();
       setOwnerBookings(updated);
     } catch (err) {
       alert("Error: " + err.message);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/");
-  };
-
-  const handleDeleteWarehouse = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this warehouse?")) return;
-
-    try {
-      const res = await fetch(`${API_BASE}/warehouses/${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders().headers,
-      });
-
-      if (!res.ok) throw new Error("Delete failed");
-      setWarehouses((prev) => prev.filter((w) => w.id !== id));
-      alert("✅ Deleted successfully");
-    } catch (err) {
-      alert("❌ Delete failed");
     }
   };
 
@@ -139,7 +114,10 @@ export default function OwnerDashboard() {
     try {
       const res = await fetch(`${API_BASE}/bookings/message`, {
         method: "POST",
-        headers: { ...getAuthHeaders().headers, "Content-Type": "application/json" },
+        headers: {
+          ...getAuthHeaders().headers,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           bookingId: messageBooking.id,
           merchantEmail: messageBooking.merchant.email,
@@ -220,7 +198,9 @@ export default function OwnerDashboard() {
           <div className="bg-white/10 p-4 rounded-xl border border-blue-400 text-center">
             <h3 className="text-lg font-bold text-blue-400">Occupancy Rate</h3>
             <p className="text-3xl">
-              {totalSpace ? `${Math.round(((totalSpace - availableSpace) / totalSpace) * 100)}%` : "0%"}
+              {totalSpace
+                ? `${Math.round(((totalSpace - availableSpace) / totalSpace) * 100)}%`
+                : "0%"}
             </p>
           </div>
         </div>
@@ -244,21 +224,23 @@ export default function OwnerDashboard() {
               {drafts.map((d) => (
                 <div key={d.id} className="rounded-xl bg-white/5 border border-gray-700 p-4">
                   <div className="font-semibold">
-                    {(d.address?.city || d.address?.addressLine1 || "Untitled")}
+                    {d.address?.city || d.address?.addressLine1 || "Untitled"}
                     {d.pricing?.totalSqFt ? ` — ${d.pricing.totalSqFt} sq ft` : ""}
                   </div>
                   <div className="text-sm text-gray-400 mt-1">
                     {d.address?.addressLine1 ? `${d.address.addressLine1}, ` : ""}
-                    {d.address?.city || ""}{d.address?.state ? `, ${d.address.state}` : ""} {d.address?.zip || ""}
+                    {d.address?.city || ""}
+                    {d.address?.state ? `, ${d.address.state}` : ""} {d.address?.zip || ""}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     Updated {d.updatedAt ? new Date(d.updatedAt).toLocaleString() : "just now"}
                   </div>
-                  {d.pricing?.ratePerSqFtPerMonth != null && d.pricing?.ratePerSqFtPerMonth !== "" && (
-                    <div className="text-sm text-gray-300 mt-2">
-                      ₹ {d.pricing.ratePerSqFtPerMonth} / sq ft / month
-                    </div>
-                  )}
+                  {d.pricing?.ratePerSqFtPerMonth != null &&
+                    d.pricing?.ratePerSqFtPerMonth !== "" && (
+                      <div className="text-sm text-gray-300 mt-2">
+                        ₹ {d.pricing.ratePerSqFtPerMonth} / sq ft / month
+                      </div>
+                    )}
                   <div className="flex justify-end mt-4">
                     <button
                       className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md"
@@ -338,7 +320,7 @@ export default function OwnerDashboard() {
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-yellow-500 text-black rounded"
+                className="px-4 py-2 bg-yellow-500 text:black rounded"
                 disabled={sendingMessage}
                 onClick={sendMessageToMerchant}
               >
@@ -352,25 +334,34 @@ export default function OwnerDashboard() {
       {/* Edit Warehouse Modal */}
       {editingWarehouse && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-xl w-full max-w-lg text-white">
+          <div className="bg-gray-800 p-6 rounded-xl w-full max-w-lg text:white">
             <h2 className="text-xl font-bold text-yellow-400 mb-4">Edit Warehouse</h2>
             <form onSubmit={submitEditForm} className="space-y-3">
               <input
                 value={editingWarehouse.name}
-                onChange={(e) => setEditingWarehouse({ ...editingWarehouse, name: e.target.value })}
+                onChange={(e) =>
+                  setEditingWarehouse({ ...editingWarehouse, name: e.target.value })
+                }
                 className="w-full p-2 bg-white/20 rounded"
                 placeholder="Name"
               />
               <textarea
                 value={editingWarehouse.description || ""}
-                onChange={(e) => setEditingWarehouse({ ...editingWarehouse, description: e.target.value })}
-                className="w-full p-2 bg-white/20 rounded"
+                onChange={(e) =>
+                  setEditingWarehouse({
+                    ...editingWarehouse,
+                    description: e.target.value,
+                  })
+                }
+                className="w-full p-2 bg:white/20 rounded"
                 placeholder="Description"
               />
               <input
                 type="number"
                 value={editingWarehouse.price || ""}
-                onChange={(e) => setEditingWarehouse({ ...editingWarehouse, price: e.target.value })}
+                onChange={(e) =>
+                  setEditingWarehouse({ ...editingWarehouse, price: e.target.value })
+                }
                 className="w-full p-2 bg-white/20 rounded"
                 placeholder="Price"
               />
@@ -381,7 +372,11 @@ export default function OwnerDashboard() {
                 ))}
               </div>
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setEditingWarehouse(null)} className="px-4 py-1 bg-gray-600">
+                <button
+                  type="button"
+                  onClick={() => setEditingWarehouse(null)}
+                  className="px-4 py-1 bg-gray-600"
+                >
                   Cancel
                 </button>
                 <button type="submit" className="px-4 py-1 bg-yellow-500 text-black">
