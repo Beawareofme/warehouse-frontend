@@ -10,7 +10,6 @@ import {
   FaArrowLeft,
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-// ⬇️ CHANGED: use shared API + AuthContext
 import { loginUser } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,13 +20,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login } = useAuth(); // calls AuthContext.login -> saveAuth under the hood
+  const { login } = useAuth();
 
   useEffect(() => {
-    // keep your existing cleanup
+    // cleanup legacy/local auth keys
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_token');
   }, []);
 
   async function handleLogin(e) {
@@ -36,19 +37,14 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // ✅ Use shared API helper (hits /api/auth/login) and persists to {token, auth_user}
       const payload = await loginUser({ email, password });
-
-      // ✅ Hydrate AuthContext so NavBar/guards have user immediately
       login(payload);
-
-      // ✅ Your requirement: land on Home after login
       navigate('/', { replace: true });
     } catch (err) {
-      const msg =
-        err?.message?.includes('Failed to fetch')
-          ? `Cannot reach the server. Check that the backend is running on ${API_BASE}.`
-          : err?.message || 'Something went wrong.';
+      // Always show the actual API base your build is using
+      const msg = err?.message
+        ? `${err.message} (API: ${API_BASE})`
+        : `Cannot reach the server. API: ${API_BASE}`;
       setError(msg);
     } finally {
       setLoading(false);
@@ -136,6 +132,11 @@ export default function Login() {
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
+
+              {/* tiny debug helper so you can confirm what URL your build is using */}
+              <div className="text-center text-xs text-gray-400 mt-3">
+                API: {API_BASE}
+              </div>
 
               <div className="text-center text-sm text-gray-300 mt-4">
                 Forgot your password?{' '}
