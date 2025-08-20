@@ -1,51 +1,52 @@
-// ===== EXISTING =====
-// export const API_BASE = "http://localhost:5000"; // Or your backend URL
+// ===== Robust API base detection (CRA) =====
 
-// ===== PATCHED: read from env (Vite or CRA) with localhost fallback, trim trailing slash =====
-const API_FROM_ENV =
-  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL) || 
-  (typeof process !== "undefined" && process.env && process.env.REACT_APP_API_URL);          
+// 1) Build-time env (Netlify UI -> REACT_APP_API_URL)
+const ENV_API = (process.env.REACT_APP_API_URL || "").trim();
 
-export const API_BASE = (API_FROM_ENV || "http://localhost:5000").replace(/\/+$/, "");
+// 2) Runtime overrides (no rebuild needed)
+//    - window.__API_BASE__
+//    - <meta name="x-api-base" content="https://your-api">
+//    - localStorage.API_BASE
+function runtimeApiBase() {
+  if (typeof window === "undefined") return "";
+  if (window.__API_BASE__) return String(window.__API_BASE__).trim();
 
-// (rest of your file stays the same)
+  const meta = document.querySelector('meta[name="x-api-base"]');
+  if (meta?.content) return meta.content.trim();
+
+  const fromLS = localStorage.getItem("API_BASE");
+  if (fromLS) return fromLS.trim();
+
+  return "";
+}
+
+// 3) Smart default:
+//    If we're NOT on localhost (i.e., production), use your Render API.
+//    Otherwise, use local dev server.
+const RENDER_FALLBACK = "https://warehouse-api-2148.onrender.com";
+function smartDefault() {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname || "";
+    if (host !== "localhost" && host !== "127.0.0.1") {
+      return RENDER_FALLBACK; // production-safe default
+    }
+  }
+  return "http://localhost:5000";
+}
+
+const RAW_BASE = ENV_API || runtimeApiBase() || smartDefault();
+
+// Trim trailing slashes for consistency
+export const API_BASE = RAW_BASE.replace(/\/+$/, "");
+
+// ---------- Shared helpers below (unchanged API) ----------
+
 export function getAuthHeaders() {
-  // Be backward-compatible: read either "token" (your current key) or "auth_token" (in case we set it elsewhere)
   const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
   return { headers };
 }
-
-// ---------- PATCHED: robust search for new backend endpoint ----------
-// Works with params like:
-// { q, city, state, minSqFt, maxSqFt, minPrice, maxPrice, amenities: ['24x7', 'CCTV'], sort, page, pageSize }
-export async function searchWarehouses(params = {}) {
-  const url = new URL(`${API_BASE}/warehouses/search`);
-
-  // Append query params; support arrays (e.g., amenities[])
-  Object.entries(params).forEach(([key, value]) => {
-    if (value == null) return;
-
-    if (Array.isArray(value)) {
-      value.forEach((v) => {
-        if (v != null && String(v).trim() !== "") {
-          const k = key.endsWith("[]") ? key : key;
-          url.searchParams.append(k, String(v));
-        }
-      });
-    } else {
-      const s = String(value).trim();
-      if (s !== "") url.searchParams.set(key, s);
-    }
-  });
-
-  return jsonFetch(url.toString());
-}
-
-// ===== NEW (ADD) =====
-
-const AUTH_BASE = `${API_BASE}/api/auth`;
 
 async function jsonFetch(url, options = {}) {
   const res = await fetch(url, options);
@@ -60,6 +61,28 @@ async function jsonFetch(url, options = {}) {
   return data;
 }
 
+// ---------- SEARCH ----------
+export async function searchWarehouses(params = {}) {
+  const url = new URL(`${API_BASE}/warehouses/search`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value == null) return;
+    if (Array.isArray(value)) {
+      value.forEach((v) => {
+        if (v != null && String(v).trim() !== "") {
+          url.searchParams.append(key, String(v));
+        }
+      });
+    } else {
+      const s = String(value).trim();
+      if (s !== "") url.searchParams.set(key, s);
+    }
+  });
+  return jsonFetch(url.toString());
+}
+
+// ---------- AUTH ----------
+const AUTH_BASE = `${API_BASE}/api/auth`;
+
 const TOKEN_KEY = "token";
 const USER_KEY = "auth_user";
 
@@ -67,11 +90,13 @@ export function saveAuth({ token, user }) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
+
 export function clearAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem("auth_token");
   localStorage.removeItem(USER_KEY);
 }
+
 export function getStoredUser() {
   try {
     const raw = localStorage.getItem(USER_KEY);
@@ -80,8 +105,6 @@ export function getStoredUser() {
     return null;
   }
 }
-
-// ---------- AUTH HELPERS (frontend) ----------
 
 export async function registerUser({ name, email, password, roles }) {
   const data = await jsonFetch(`${AUTH_BASE}/register`, {
@@ -117,7 +140,7 @@ function authHeaders() {
 }
 
 /* =======================
-   PATCHED LISTINGS HELPERS
+   LISTINGS HELPERS
    ======================= */
 
 function toHttpError(res, data) {
@@ -178,5 +201,5 @@ export async function listMyListings() {
   let data;
   try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
   if (!res.ok) throw toHttpError(res, data);
-  return data.listings || [];
+  return data.listings || data || [];
 }
